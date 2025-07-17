@@ -1,6 +1,8 @@
 # Homological Analysis of Dynamical Stability in Toroidal Neural ODEs
 
-This repository contains the official implementation for the paper "[Your Paper Title Here]". We propose a novel method to diagnose the dynamical stability of Neural ODEs trained on toroidal manifolds by applying classical theory from algebraic topology.
+This repository contains the official implementation for the paper "Homological Analysis of Dynamical Stability in Toroidal Neural ODEs
+". 
+We propose a novel method to diagnose the dynamical stability of Neural ODEs trained on toroidal manifolds by applying classical theory from algebraic topology.
 
 Our method provides a crucial tool for verifying the safety and reliability of learned dynamical models, moving beyond standard performance metrics to analyze the model's internal, qualitative properties.
 
@@ -10,7 +12,7 @@ To set up the environment and install the required dependencies, please use the 
 
 ```bash
 # Clone the repository
-git clone [https://github.com/your-username/Homological-Analysis-of-Toroidal-Neural-ODEs.git](https://github.com/your-username/Homological-Analysis-of-Toroidal-Neural-ODEs.git)
+git clone [https://github.com/SHlee-TDA/homological_analysis_of_neural_ode.git](https://github.com/SHlee-TDA/homological_analysis_of_neural_ode.git)
 cd Homological-Analysis-of-Toroidal-Neural-ODEs
 
 # Create and activate the conda environment
