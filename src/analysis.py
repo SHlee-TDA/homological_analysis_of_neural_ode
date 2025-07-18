@@ -12,7 +12,7 @@ def generate_basis_loops(n_points=100):
     gamma2 = torch.stack([torch.zeros_like(theta), theta], dim=1)
     return [gamma1, gamma2]
 
-def run_homological_analysis(model, n_points=100):
+def run_homological_analysis(model, n_points=200):
     """Computes the homology transformation matrix and its eigenvalues for a trained model."""
     # 1. Generate basis loops using the dedicated function
     basis_loops = generate_basis_loops(n_points)

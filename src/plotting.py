@@ -111,3 +111,42 @@ def create_homology_figure(model, filename="figure2_homology.pdf"):
     plt.savefig(filename) # Save as PDF
     print(f"Homology figure saved to {filename}")
     plt.close(fig)
+    
+    
+
+def plot_chaotic_trajectories(t_gt, trajectories_gt, trajectories_pred, n_to_plot=3, filename="figure4_chaotic_tracking.pdf"):
+    """
+    Visualizes how well the model tracks chaotic trajectories ON THE TORUS SQUARE.
+    This is achieved by applying a modulo operation.
+    """
+    fig, axes = plt.subplots(1, n_to_plot, figsize=(6 * n_to_plot, 5.5))
+    if n_to_plot == 1: axes = [axes]
+    
+    fig.suptitle('Chaotic Trajectories on the Torus [0, 2π] x [0, 2π]', fontsize=16)
+
+    for i in range(n_to_plot):
+        ax = axes[i]
+        # Apply modulo to project the paths back onto the torus square
+        gt_path = trajectories_gt[i].detach().numpy() % (2 * np.pi)
+        pred_path = trajectories_pred[i].detach().numpy() % (2 * np.pi)
+        
+        ax.plot(gt_path[:, 0], gt_path[:, 1], 'b:', label='Ground Truth', alpha=0.7)
+        ax.plot(pred_path[:, 0], pred_path[:, 1], 'r-', label='Predicted', alpha=0.7)
+        
+        # Mark start and end points
+        ax.plot(gt_path[0, 0], gt_path[0, 1], 'go', markersize=10, label='Start')
+        ax.plot(gt_path[-1, 0], gt_path[-1, 1], 'ks', markersize=8, label='End (GT)')
+        
+        ax.set_title(f'Trajectory {i+1}')
+        ax.set_xlabel('Theta 1 (mod 2π)')
+        ax.set_ylabel('Theta 2 (mod 2π)')
+        ax.set_xlim(0, 2 * np.pi)
+        ax.set_ylim(0, 2 * np.pi)
+        ax.legend()
+        ax.grid(True)
+        ax.set_aspect('equal')
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.savefig(filename)
+    print(f"Chaotic trajectory tracking figure (on torus) saved to {filename}")
+    plt.close(fig)

@@ -1,5 +1,9 @@
 import numpy as np
 import torch
+import torch.nn as nn
+from torchdiffeq import odeint
+import scipy.linalg
+
 
 class RobotArm:
     """Defines the kinematics of a 2-DOF robot arm."""
@@ -13,6 +17,15 @@ class RobotArm:
         x = self.l1 * torch.cos(theta1) + self.l2 * torch.cos(theta1 + theta2)
         y = self.l1 * torch.sin(theta1) + self.l2 * torch.sin(theta1 + theta2)
         return torch.stack([x, y], dim=1)
+
+class AnosovSystem(nn.Module):
+    def __init__(self):
+        super().__init__()
+        M = torch.tensor([[2.0, 1.0], [1.0, 1.0]])
+        self.A = torch.tensor(scipy.linalg.logm(M.numpy()).real, dtype=torch.float32)
+    def forward(self, t, y): 
+        return torch.matmul(self.A, y.T).T
+
 
 def generate_trajectory_data(robot, n_points=200, t_max=2.0):
     """Generates the ground truth trajectory data for the robot arm to draw a circle."""
@@ -29,3 +42,12 @@ def generate_trajectory_data(robot, n_points=200, t_max=2.0):
     # Normalize angles to the [0, 2pi) range
     theta_truth = torch.stack([theta1_truth, theta2_truth], dim=1) % (2 * np.pi)
     return t, theta_truth
+
+
+
+def generate_chaotic_data(system, n_traj=10, n_points=50, t_max=1.0):
+    t = torch.linspace(0, t_max, n_points)
+    initial_points = torch.rand(n_traj, 2) * 2 * np.pi
+    with torch.no_grad():
+        trajectories = odeint(system, initial_points, t).permute(1, 0, 2)
+    return t, trajectories
