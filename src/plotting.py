@@ -150,3 +150,118 @@ def plot_chaotic_trajectories(t_gt, trajectories_gt, trajectories_pred, n_to_plo
     plt.savefig(filename)
     print(f"Chaotic trajectory tracking figure (on torus) saved to {filename}")
     plt.close(fig)
+
+
+# In plotting.py or your main script
+
+def create_hidden_instability_figure(ground_truth_system, trained_model, filename="figure5_hidden_instability.pdf"):
+    """
+    Creates a 2x2 figure to visualize and compare the ground truth dynamics
+    with the learned dynamics, highlighting the hidden instability.
+    """
+    # Create a grid of points on the 2D torus plane
+    y1, y2 = np.meshgrid(np.linspace(0, 2*np.pi, 25), np.linspace(0, 2*np.pi, 25))
+    y_grid = torch.tensor(np.stack([y1.ravel(), y2.ravel()], axis=-1), dtype=torch.float32)
+
+    # Get the vector fields from both models
+    with torch.no_grad():
+        gt_dydt = ground_truth_system(0, y_grid).numpy()
+        learned_dydt = trained_model(0, y_grid).numpy()
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+    fig.suptitle("Detecting Hidden Instability via Global Analysis", fontsize=16)
+
+    # --- Top Row: Ground Truth Dynamics (The "Stable" Problem) ---
+    # (a) Full ground truth vector field
+    ax1 = axes[0, 0]
+    ax1.quiver(y_grid[:, 0], y_grid[:, 1], gt_dydt[:, 0], gt_dydt[:, 1], color='green')
+    ax1.set_title("(a) Ground Truth Vector Field (Stable Sink)")
+    ax1.set_aspect('equal')
+
+    # (b) Ground truth with training region highlighted
+    ax2 = axes[0, 1]
+    ax2.quiver(y_grid[:, 0], y_grid[:, 1], gt_dydt[:, 0], gt_dydt[:, 1], color='green')
+    training_region = plt.Rectangle((0, 0), np.pi, np.pi, color='red', alpha=0.1, label='Training Region')
+    ax2.add_patch(training_region)
+    ax2.set_title("(b) Ground Truth w/ Training Region")
+    ax2.set_aspect('equal')
+
+    # --- Bottom Row: Learned Dynamics (The "Unstable" Solution) ---
+    # (c) Full learned vector field
+    ax3 = axes[1, 0]
+    ax3.quiver(y_grid[:, 0], y_grid[:, 1], learned_dydt[:, 0], learned_dydt[:, 1], color='teal')
+    ax3.set_title("(c) Learned Vector Field (Global View)")
+    ax3.set_aspect('equal')
+
+    # (d) Learned field with training region highlighted
+    ax4 = axes[1, 1]
+    ax4.quiver(y_grid[:, 0], y_grid[:, 1], learned_dydt[:, 0], learned_dydt[:, 1], color='teal')
+    training_region_2 = plt.Rectangle((0, 0), np.pi, np.pi, color='red', alpha=0.1, label='Training Region')
+    ax4.add_patch(training_region_2)
+    ax4.set_title("(d) Learned Field w/ Training Region")
+    ax4.set_aspect('equal')
+
+    for ax in axes.flat:
+        ax.set_xlabel("Theta 1"); ax.set_ylabel("Theta 2")
+        ax.set_xlim(0, 2*np.pi); ax.set_ylim(0, 2*np.pi)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.savefig(filename)
+    print(f"Hidden instability figure saved to {filename}")
+    plt.close(fig)
+    
+# In plotting.py, replace the old `create_hidden_instability_figure`
+
+def create_hidden_instability_figure_3d(ground_truth_system, trained_model, R=2, r=1, filename="figure5_hidden_instability_3d.pdf"):
+    """Creates a 1x2 3D figure to visualize the vector fields on the torus surface."""
+    
+    # Create a grid of points in the 2D angle space
+    n_grid = 15
+    theta1_grid, theta2_grid = np.meshgrid(np.linspace(0, 2*np.pi, n_grid), np.linspace(0, 2*np.pi, n_grid))
+    y_grid_2d = torch.tensor(np.stack([theta1_grid.ravel(), theta2_grid.ravel()], axis=-1), dtype=torch.float32)
+
+    # Get velocity vectors in 2D angle space from both models
+    with torch.no_grad():
+        gt_dydt_2d = ground_truth_system(0, y_grid_2d).numpy()
+        learned_dydt_2d = trained_model(0, y_grid_2d).numpy()
+
+    # --- Convert 2D vectors to 3D vectors using the Jacobian of the torus parameterization ---
+    def get_3d_vectors(points_2d, vectors_2d):
+        t1 = points_2d[:, 0]; t2 = points_2d[:, 1]
+        dt1 = vectors_2d[:, 0]; dt2 = vectors_2d[:, 1]
+        
+        # Position (X, Y, Z)
+        x = (R + r * np.cos(t2)) * np.cos(t1)
+        y = (R + r * np.cos(t2)) * np.sin(t1)
+        z = r * np.sin(t2)
+        
+        # Velocity (dX/dt, dY/dt, dZ/dt)
+        dx = - (R + r * np.cos(t2)) * np.sin(t1) * dt1 - r * np.sin(t2) * np.cos(t1) * dt2
+        dy =   (R + r * np.cos(t2)) * np.cos(t1) * dt1 - r * np.sin(t2) * np.sin(t1) * dt2
+        dz =   r * np.cos(t2) * dt2
+        
+        return x, y, z, dx, dy, dz
+
+    gt_x, gt_y, gt_z, gt_dx, gt_dy, gt_dz = get_3d_vectors(y_grid_2d, gt_dydt_2d)
+    l_x, l_y, l_z, l_dx, l_dy, l_dz = get_3d_vectors(y_grid_2d, learned_dydt_2d)
+    
+    # --- Plotting ---
+    fig = plt.figure(figsize=(16, 8))
+    
+    # (a) Ground Truth Vector Field on 3D Torus
+    ax1 = fig.add_subplot(121, projection='3d')
+    ax1.quiver(gt_x, gt_y, gt_z, gt_dx, gt_dy, gt_dz, length=0.3, normalize=True, color='green')
+    ax1.set_title("(a) Ground Truth Vector Field (Stable Sink)")
+    
+    # (b) Learned Vector Field on 3D Torus
+    ax2 = fig.add_subplot(122, projection='3d')
+    ax2.quiver(l_x, l_y, l_z, l_dx, l_dy, l_dz, length=0.3, normalize=True, color='teal')
+    ax2.set_title("(b) Learned Vector Field (Global View)")
+
+    for ax in [ax1, ax2]:
+        ax.set_xlabel('X'); ax.set_ylabel('Y'); ax.set_zlabel('Z')
+        ax.set_box_aspect([1,1,1])
+
+    plt.savefig(filename)
+    print(f"3D vector field figure saved to {filename}")
+    plt.show()

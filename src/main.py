@@ -7,12 +7,12 @@ import random
 from torchdiffeq import odeint
 
 from models import ToroidalODE, ComplexToroidalODE
-from data_generation import RobotArm, AnosovSystem
-from data_generation import generate_trajectory_data, generate_chaotic_data
+from data_generation import RobotArm, AnosovSystem, StableSystem
+from data_generation import generate_trajectory_data, generate_chaotic_data, generate_biased_stable_data
 from analysis import run_homological_analysis
 
 try:
-    from plotting import create_performance_figure, create_homology_figure, plot_chaotic_trajectories
+    from plotting import create_performance_figure, create_homology_figure, plot_chaotic_trajectories, create_hidden_instability_figure, create_hidden_instability_figure_3d
 except ImportError:
     print("Warning: plotting.py not found. Plotting functions will be disabled.")
     def create_performance_figure(*args, **kwargs): pass
@@ -109,7 +109,30 @@ def run_experiment_2(seed, epochs=4001, lr=1e-4):
 
     chaos_perf_filename = f"../results/figure4_chaotic_tracking_seed{seed}.pdf"
     plot_chaotic_trajectories(time_gt, traj_gt, traj_pred, filename=chaos_perf_filename)
+
+# 
+
+def run_experiment_3(seed):
+    """Runs Experiment 3: Detecting Hidden Global Instability."""
+    print(f"\n===== Running Experiment 3 with Seed: {seed} =====")
+    set_seed(seed)
     
+    # 1. Setup the stable system and generate biased data from it
+    stable_system = StableSystem()
+    time_gt, trajectories_gt = generate_biased_stable_data(stable_system)
+    
+    # 2. Train a complex model on the biased data
+    model = ComplexToroidalODE()
+    trained_model = train_model(model, time_gt, trajectories_gt, epochs=300, lr=1e-2, is_batch=True)
+    
+    # 3. Create the new 2x2 visualization
+    figure_filename = f"../results/figure5_hidden_instability_seed{seed}.pdf"
+    create_hidden_instability_figure(stable_system, trained_model, filename=figure_filename)
+    create_hidden_instability_figure_3d(stable_system, trained_model)
+    # 4. Run our global homological analysis for the final diagnosis
+    homology_matrix, eigenvalues = run_homological_analysis(trained_model)
+    print_diagnosis(homology_matrix, eigenvalues, seed)
+
 
 def print_diagnosis(matrix, eigenvalues, seed):
     """Prints the final analysis results."""
@@ -149,6 +172,9 @@ if __name__ == '__main__':
     elif args.experiment == '2b':
         # Experiment 2B: Training on Chaotic Data
         run_experiment_2(seed=42)
-        
+    
+    elif args.experiment == '3':
+        # 
+        run_experiment_3(seed=42)
     else:
         print(f"Experiment {args.experiment} not recognized.")

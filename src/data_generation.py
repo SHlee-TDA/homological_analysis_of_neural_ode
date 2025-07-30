@@ -26,6 +26,12 @@ class AnosovSystem(nn.Module):
     def forward(self, t, y): 
         return torch.matmul(self.A, y.T).T
 
+class StableSystem(nn.Module):
+    """A simple, stable system where all points converges to a single sink at (pi, pi)"""
+    def forward(self, t, y):
+        return -0.5* (y-np.pi)
+
+
 
 def generate_trajectory_data(robot, n_points=200, t_max=2.0):
     """Generates the ground truth trajectory data for the robot arm to draw a circle."""
@@ -51,3 +57,25 @@ def generate_chaotic_data(system, n_traj=10, n_points=50, t_max=1.0):
     with torch.no_grad():
         trajectories = odeint(system, initial_points, t).permute(1, 0, 2)
     return t, trajectories
+
+# In data_generation.py
+
+def generate_biased_stable_data(system, n_trajectories=20, n_points=50, t_max=2.0, 
+                                region_size=np.pi/2, noise_level=0.1):
+    """
+    Generates training data from the stable system, but only from a NARROW and NOISY region.
+    """
+    print(f"Generating biased data from a narrow region with noise (level={noise_level})...")
+    t = torch.linspace(0, t_max, n_points)
+    
+    # Sample initial points from a much smaller region, e.g., [0, pi/2] x [0, pi/2]
+    initial_points = torch.rand(n_trajectories, 2) * region_size
+    
+    with torch.no_grad():
+        # Generate clean trajectories
+        clean_trajectories = odeint(system, initial_points, t).permute(1, 0, 2)
+        # Add noise
+        noise = torch.randn_like(clean_trajectories) * noise_level
+        noisy_trajectories = clean_trajectories + noise
+        
+    return t, noisy_trajectories
