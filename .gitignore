@@ -210,3 +210,6 @@ __marimo__/
 experiments/logs/
 experiments/figures/
 experiments/*.pdf
+*.pdf
+results/
+experiments/models/
